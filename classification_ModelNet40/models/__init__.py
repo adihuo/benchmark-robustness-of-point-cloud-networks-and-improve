@@ -10,3 +10,4 @@ from .pointconv import PointConv
 from .pointnet import PointNet
 from .pointnet2 import PointNet2
 from .pointcont import PointConT_cls
+from .apes import APES
