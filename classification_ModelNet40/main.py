@@ -2,7 +2,6 @@
 Usage:
 python main.py --model PointMLP --msg demo
 """
-print('-----')
 
 import argparse
 import os
