@@ -2,6 +2,8 @@
 Usage:
 python main.py --model PointMLP --msg demo
 """
+print('-----')
+
 import argparse
 import os
 import logging
@@ -20,7 +22,6 @@ from torch.optim.lr_scheduler import CosineAnnealingLR
 import sklearn.metrics as metrics
 import numpy as np
 
-
 def parse_args():
     """Parameters"""
     parser = argparse.ArgumentParser('training')
@@ -28,14 +29,14 @@ def parse_args():
                         help='path to save checkpoint (default: checkpoint)')
     parser.add_argument('--msg', type=str, help='message after checkpoint')
     parser.add_argument('--batch_size', type=int, default=16, help='batch size in training')
-    parser.add_argument('--model', default='PointNet', help='model name [default: pointnet_cls]')
+    parser.add_argument('--model', default='pointMLP', help='model name [default: pointnet_cls]')
     parser.add_argument('--epoch', default=300, type=int, help='number of epoch in training')
     parser.add_argument('--num_points', type=int, default=1024, help='Point Number')
     parser.add_argument('--learning_rate', default=0.1, type=float, help='learning rate in training')
     parser.add_argument('--min_lr', default=0.005, type=float, help='min lr')
     parser.add_argument('--weight_decay', type=float, default=2e-4, help='decay rate')
     parser.add_argument('--seed', type=int, help='random seed')
-    parser.add_argument('--workers', default=8, type=int, help='workers')
+    parser.add_argument('--workers', default=4, type=int, help='workers')
     return parser.parse_args()
 
 
@@ -81,6 +82,7 @@ def main():
     printf(f"args: {args}")
     printf('==> Building model..')
     net = models.__dict__[args.model]()
+    # print(net)
     criterion = cal_loss
     net = net.to(device)
     # criterion = criterion.to(device)
@@ -177,6 +179,7 @@ def main():
 
 
 def train(net, trainloader, optimizer, criterion, device):
+    args = parse_args()
     net.train()
     train_loss = 0
     correct = 0
@@ -186,7 +189,8 @@ def train(net, trainloader, optimizer, criterion, device):
     time_cost = datetime.datetime.now()
     for batch_idx, (data, label) in enumerate(trainloader):
         data, label = data.to(device), label.to(device).squeeze()
-        data = data.permute(0, 2, 1)  # so, the input data shape is [batch, 3, 1024]
+        if not args.model == 'PointConT_cls':
+            data = data.permute(0, 2, 1)  # so, the input data shape is [batch, 3, 1024]
         optimizer.zero_grad()
         logits = net(data)
         loss = criterion(logits, label)
@@ -217,6 +221,7 @@ def train(net, trainloader, optimizer, criterion, device):
 
 
 def validate(net, testloader, criterion, device):
+    args = parse_args()
     net.eval()
     test_loss = 0
     correct = 0
@@ -227,7 +232,8 @@ def validate(net, testloader, criterion, device):
     with torch.no_grad():
         for batch_idx, (data, label) in enumerate(testloader):
             data, label = data.to(device), label.to(device).squeeze()
-            data = data.permute(0, 2, 1)
+            if not args.model == 'PointConT_cls':
+                data = data.permute(0, 2, 1)
             logits = net(data)
             loss = criterion(logits, label)
             test_loss += loss.item()
