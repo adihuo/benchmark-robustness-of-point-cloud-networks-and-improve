@@ -40,12 +40,12 @@ def square_distance(src, dst):
     Output:
         dist: per-point square distance, [B, N, M]
     """
-    B, N, _ = src.shape
-    _, M, _ = dst.shape
-    dist = -2 * torch.matmul(src, dst.permute(0, 2, 1))
-    dist += torch.sum(src ** 2, -1).view(B, N, 1)
-    dist += torch.sum(dst ** 2, -1).view(B, 1, M)
-    return dist
+    B, N, _ = src.shape  # 获取源点的形状
+    _, M, _ = dst.shape  # 获取目标点的形状
+    dist = -2 * torch.matmul(src, dst.permute(0, 2, 1))  # 计算两组点的内积
+    dist += torch.sum(src ** 2, -1).view(B, N, 1)  # 计算源点的模长的平方，并改变形状以便进行广播
+    dist += torch.sum(dst ** 2, -1).view(B, 1, M)  # 计算目标点的模长的平方，并改变形状以便进行广播
+    return dist  # 返回计算得到的距离矩阵
 
 
 def index_points(points, idx):
@@ -346,23 +346,23 @@ class Model(nn.Module):
 
 
 
-def pointMLP(num_classes=40, **kwargs) -> Model:
+def pointMLP(num_classes=15, **kwargs) -> Model:
     return Model(points=1024, class_num=num_classes, embed_dim=64, groups=1, res_expansion=1.0,
                    activation="relu", bias=False, use_xyz=False, normalize="anchor",
                    dim_expansion=[2, 2, 2, 2], pre_blocks=[2, 2, 2, 2], pos_blocks=[2, 2, 2, 2],
                    k_neighbors=[24, 24, 24, 24], reducers=[2, 2, 2, 2], **kwargs)
 
 
-def pointMLPElite(num_classes=40, **kwargs) -> Model:
+def pointMLPElite(num_classes=15, **kwargs) -> Model:
     return Model(points=1024, class_num=num_classes, embed_dim=32, groups=1, res_expansion=0.25,
                    activation="relu", bias=False, use_xyz=False, normalize="anchor",
                    dim_expansion=[2, 2, 2, 1], pre_blocks=[1, 1, 2, 1], pos_blocks=[1, 1, 2, 1],
                    k_neighbors=[24,24,24,24], reducers=[2, 2, 2, 2], **kwargs)
 
 if __name__ == '__main__':
-    data = torch.rand(2, 3, 1024)
+    data = torch.rand(2, 3, 1024).cuda()
     print("===> testing pointMLP ...")
-    model = pointMLP()
+    model = pointMLP().cuda()
     out = model(data)
     print(out.shape)
 
