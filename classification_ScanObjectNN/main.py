@@ -5,33 +5,42 @@ python main.py --model PointNet --msg demo
 or
 CUDA_VISIBLE_DEVICES=0 nohup python main.py --model PointNet --msg demo > nohup/PointNet_demo.out &
 """
+
+
 import argparse
 import os
 import logging
 import datetime
 import torch
+
 import torch.nn.parallel
+
 import torch.backends.cudnn as cudnn
 import torch.optim
 import torch.utils.data
 import torch.utils.data.distributed
 from torch.utils.data import DataLoader
+
 import models as models
+print('-----')
+
 from utils import Logger, mkdir_p, progress_bar, save_model, save_args, cal_loss
+
 from ScanObjectNN import ScanObjectNN
+
 from torch.optim.lr_scheduler import CosineAnnealingLR
 import sklearn.metrics as metrics
 import numpy as np
 
-
+print("----")
 def parse_args():
     """Parameters"""
     parser = argparse.ArgumentParser('training')
     parser.add_argument('-c', '--checkpoint', type=str, metavar='PATH',
                         help='path to save checkpoint (default: checkpoint)')
     parser.add_argument('--msg', type=str, help='message after checkpoint')
-    parser.add_argument('--batch_size', type=int, default=32, help='batch size in training')
-    parser.add_argument('--model', default='PointNet', help='model name [default: pointnet_cls]')
+    parser.add_argument('--batch_size', type=int, default=16, help='batch size in training')
+    parser.add_argument('--model', default='CurveNet', help='model name [default: pointnet_cls]')
     parser.add_argument('--num_classes', default=15, type=int, help='default value for classes of ScanObjectNN')
     parser.add_argument('--epoch', default=200, type=int, help='number of epoch in training')
     parser.add_argument('--num_points', type=int, default=1024, help='Point Number')
@@ -43,7 +52,11 @@ def parse_args():
     return parser.parse_args()
 
 
+
+
+
 def main():
+    print('-----')
     args = parse_args()
     os.environ["HDF5_USE_FILE_LOCKING"] = "FALSE"
     if args.seed is not None:
@@ -63,6 +76,35 @@ def main():
     if not os.path.isdir(args.checkpoint):
         mkdir_p(args.checkpoint)
 
+    # 来自modelnet40
+    # args = parse_args()
+    # if args.seed is None:
+    #     args.seed = np.random.randint(1, 10000)
+    # os.environ["HDF5_USE_FILE_LOCKING"] = "FALSE"
+    #
+    # assert torch.cuda.is_available(), "Please ensure codes are executed in cuda."
+    # device = 'cuda'
+    # if args.seed is not None:
+    #     torch.manual_seed(args.seed)
+    #     np.random.seed(args.seed)
+    #     torch.cuda.manual_seed_all(args.seed)
+    #     torch.cuda.manual_seed(args.seed)
+    #     torch.set_printoptions(10)
+    #     torch.backends.cudnn.benchmark = False
+    #     torch.backends.cudnn.deterministic = True
+    #     os.environ['PYTHONHASHSEED'] = str(args.seed)
+    # time_str = str(datetime.datetime.now().strftime('-%Y%m%d%H%M%S'))
+    # if args.msg is None:
+    #     message = time_str
+    # else:
+    #     message = "-" + args.msg
+    # args.checkpoint = 'checkpoints/' + args.model + message + '-' + str(args.seed)
+    # if not os.path.isdir(args.checkpoint):
+    #     mkdir_p(args.checkpoint)
+    # 来自modelnet40
+
+
+
     screen_logger = logging.getLogger("Model")
     screen_logger.setLevel(logging.INFO)
     formatter = logging.Formatter('%(message)s')
@@ -78,7 +120,7 @@ def main():
     # Model
     printf(f"args: {args}")
     printf('==> Building model..')
-    net = models.__dict__[args.model](num_classes=args.num_classes)
+    net = models.__dict__[args.model]()
     criterion = cal_loss
     net = net.to(device)
     # criterion = criterion.to(device)
@@ -175,6 +217,7 @@ def main():
 
 
 def train(net, trainloader, optimizer, criterion, device):
+    args = parse_args()
     net.train()
     train_loss = 0
     correct = 0
@@ -184,7 +227,8 @@ def train(net, trainloader, optimizer, criterion, device):
     time_cost = datetime.datetime.now()
     for batch_idx, (data, label) in enumerate(trainloader):
         data, label = data.to(device), label.to(device).squeeze()
-        data = data.permute(0, 2, 1)  # so, the input data shape is [batch, 3, 1024]
+        if not args.model == 'PointConT_cls':
+            data = data.permute(0, 2, 1)  # so, the input data shape is [batch, 3, 1024]
         optimizer.zero_grad()
         logits = net(data)
         loss = criterion(logits, label)
@@ -214,6 +258,7 @@ def train(net, trainloader, optimizer, criterion, device):
 
 
 def validate(net, testloader, criterion, device):
+    args = parse_args()
     net.eval()
     test_loss = 0
     correct = 0
@@ -224,7 +269,8 @@ def validate(net, testloader, criterion, device):
     with torch.no_grad():
         for batch_idx, (data, label) in enumerate(testloader):
             data, label = data.to(device), label.to(device).squeeze()
-            data = data.permute(0, 2, 1)
+            if not args.model == 'PointConT_cls':
+                data = data.permute(0, 2, 1)
             logits = net(data)
             loss = criterion(logits, label)
             test_loss += loss.item()
@@ -248,4 +294,5 @@ def validate(net, testloader, criterion, device):
 
 
 if __name__ == '__main__':
+    print('-----')
     main()
