@@ -12,27 +12,19 @@ import os
 import logging
 import datetime
 import torch
-
 import torch.nn.parallel
-
 import torch.backends.cudnn as cudnn
 import torch.optim
 import torch.utils.data
 import torch.utils.data.distributed
 from torch.utils.data import DataLoader
-
 import models as models
-print('-----')
-
 from utils import Logger, mkdir_p, progress_bar, save_model, save_args, cal_loss
-
 from ScanObjectNN import ScanObjectNN
-
 from torch.optim.lr_scheduler import CosineAnnealingLR
 import sklearn.metrics as metrics
 import numpy as np
 
-print("----")
 def parse_args():
     """Parameters"""
     parser = argparse.ArgumentParser('training')
@@ -56,7 +48,6 @@ def parse_args():
 
 
 def main():
-    print('-----')
     args = parse_args()
     os.environ["HDF5_USE_FILE_LOCKING"] = "FALSE"
     if args.seed is not None:
@@ -75,35 +66,6 @@ def main():
     args.checkpoint = 'checkpoints/' + args.model + message
     if not os.path.isdir(args.checkpoint):
         mkdir_p(args.checkpoint)
-
-    # 来自modelnet40
-    # args = parse_args()
-    # if args.seed is None:
-    #     args.seed = np.random.randint(1, 10000)
-    # os.environ["HDF5_USE_FILE_LOCKING"] = "FALSE"
-    #
-    # assert torch.cuda.is_available(), "Please ensure codes are executed in cuda."
-    # device = 'cuda'
-    # if args.seed is not None:
-    #     torch.manual_seed(args.seed)
-    #     np.random.seed(args.seed)
-    #     torch.cuda.manual_seed_all(args.seed)
-    #     torch.cuda.manual_seed(args.seed)
-    #     torch.set_printoptions(10)
-    #     torch.backends.cudnn.benchmark = False
-    #     torch.backends.cudnn.deterministic = True
-    #     os.environ['PYTHONHASHSEED'] = str(args.seed)
-    # time_str = str(datetime.datetime.now().strftime('-%Y%m%d%H%M%S'))
-    # if args.msg is None:
-    #     message = time_str
-    # else:
-    #     message = "-" + args.msg
-    # args.checkpoint = 'checkpoints/' + args.model + message + '-' + str(args.seed)
-    # if not os.path.isdir(args.checkpoint):
-    #     mkdir_p(args.checkpoint)
-    # 来自modelnet40
-
-
 
     screen_logger = logging.getLogger("Model")
     screen_logger.setLevel(logging.INFO)
@@ -294,5 +256,4 @@ def validate(net, testloader, criterion, device):
 
 
 if __name__ == '__main__':
-    print('-----')
     main()
