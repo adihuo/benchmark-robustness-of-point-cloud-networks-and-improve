@@ -2,9 +2,14 @@
 Usage:
 python main.py --model PointMLP --msg demo
 """
+# print('-----')
+
+
+
 
 import argparse
 import os
+import shutil
 import logging
 import datetime
 import torch
@@ -21,6 +26,29 @@ from torch.optim.lr_scheduler import CosineAnnealingLR
 import sklearn.metrics as metrics
 import numpy as np
 
+
+def move_files(files, destination_directory):
+    # 检查目标目录是否存在，如果不存在则创建
+    if not os.path.exists(destination_directory):
+        os.makedirs(destination_directory)
+        print("目标目录不存在")
+
+    for file_path in files:
+        # 检查文件是否存在
+        if os.path.exists(file_path):
+            # 获取文件名
+            file_name = os.path.basename(file_path)
+            # 构造目标文件路径
+            destination_path = os.path.join(destination_directory, file_name)
+
+            try:
+                # 移动（复制）文件
+                shutil.copy(file_path, destination_path)
+                # print(f"文件 '{file_name}' 复制成功到 '{destination_directory}' 目录")
+            except Exception as e:
+                print(f"移动文件 '{file_name}' 失败: {e}")
+        else:
+            print(f"文件 '{file_path}' 不存在")
 def parse_args():
     """Parameters"""
     parser = argparse.ArgumentParser('training')
@@ -28,7 +56,7 @@ def parse_args():
                         help='path to save checkpoint (default: checkpoint)')
     parser.add_argument('--msg', type=str, help='message after checkpoint')
     parser.add_argument('--batch_size', type=int, default=16, help='batch size in training')
-    parser.add_argument('--model', default='pointMLP', help='model name [default: pointnet_cls]')
+    parser.add_argument('--model', default='PointConT_cls', help='model name [default: pointnet_cls]')
     parser.add_argument('--epoch', default=300, type=int, help='number of epoch in training')
     parser.add_argument('--num_points', type=int, default=1024, help='Point Number')
     parser.add_argument('--learning_rate', default=0.1, type=float, help='learning rate in training')
@@ -36,11 +64,16 @@ def parse_args():
     parser.add_argument('--weight_decay', type=float, default=2e-4, help='decay rate')
     parser.add_argument('--seed', type=int, help='random seed')
     parser.add_argument('--workers', default=4, type=int, help='workers')
+    parser.add_argument('--original_data', default=True, help='use original test dataset')
     return parser.parse_args()
 
 
 def main():
     args = parse_args()
+    # use original test dataset
+    if args.original_data:
+        move_files(['data/ply_data_test0.h5', 'data/ply_data_test1.h5'], 'data/modelnet40_ply_hdf5_2048')
+
     if args.seed is None:
         args.seed = np.random.randint(1, 10000)
     os.environ["HDF5_USE_FILE_LOCKING"] = "FALSE"
@@ -120,8 +153,8 @@ def main():
         optimizer_dict = checkpoint['optimizer']
 
     printf('==> Preparing data..')
-    train_loader = DataLoader(ModelNet40(partition='train', num_points=args.num_points), num_workers=args.workers,
-                              batch_size=args.batch_size, shuffle=True, drop_last=True)
+
+    train_loader = DataLoader(ModelNet40(partition='train', num_points=args.num_points), num_workers=args.workers, batch_size=args.batch_size, shuffle=True, drop_last=True)
     test_loader = DataLoader(ModelNet40(partition='test', num_points=args.num_points), num_workers=args.workers,
                              batch_size=args.batch_size // 2, shuffle=False, drop_last=False)
 
@@ -132,6 +165,7 @@ def main():
 
     for epoch in range(start_epoch, args.epoch):
         printf('Epoch(%d/%s) Learning Rate %s:' % (epoch + 1, args.epoch, optimizer.param_groups[0]['lr']))
+
         train_out = train(net, train_loader, optimizer, criterion, device)  # {"loss", "acc", "acc_avg", "time"}
         test_out = validate(net, test_loader, criterion, device)
         scheduler.step()
@@ -188,6 +222,7 @@ def train(net, trainloader, optimizer, criterion, device):
     time_cost = datetime.datetime.now()
     for batch_idx, (data, label) in enumerate(trainloader):
         data, label = data.to(device), label.to(device).squeeze()
+        # print('----', data.shape) # [16, 1024, 3]
         if not args.model == 'PointConT_cls':
             data = data.permute(0, 2, 1)  # so, the input data shape is [batch, 3, 1024]
         optimizer.zero_grad()
