@@ -6,7 +6,6 @@ or
 CUDA_VISIBLE_DEVICES=0 nohup python main.py --model PointNet --msg demo > nohup/PointNet_demo.out &
 """
 
-
 import argparse
 import os
 import logging
@@ -24,6 +23,31 @@ from ScanObjectNN import ScanObjectNN
 from torch.optim.lr_scheduler import CosineAnnealingLR
 import sklearn.metrics as metrics
 import numpy as np
+import shutil
+
+
+def move_files(files, destination_directory):
+    # 检查目标目录是否存在，如果不存在则创建
+    if not os.path.exists(destination_directory):
+        os.makedirs(destination_directory)
+        print("目标目录不存在")
+
+    for file_path in files:
+        # 检查文件是否存在
+        if os.path.exists(file_path):
+            # 获取文件名
+            file_name = os.path.basename(file_path)
+            # 构造目标文件路径
+            destination_path = os.path.join(destination_directory, file_name)
+
+            try:
+                # 移动（复制）文件
+                shutil.copy(file_path, destination_path)
+                # print(f"文件 '{file_name}' 复制成功到 '{destination_directory}' 目录")
+            except Exception as e:
+                print(f"移动文件 '{file_name}' 失败: {e}")
+        else:
+            print(f"文件 '{file_path}' 不存在")
 
 def parse_args():
     """Parameters"""
@@ -32,15 +56,16 @@ def parse_args():
                         help='path to save checkpoint (default: checkpoint)')
     parser.add_argument('--msg', type=str, help='message after checkpoint')
     parser.add_argument('--batch_size', type=int, default=16, help='batch size in training')
-    parser.add_argument('--model', default='CurveNet', help='model name [default: pointnet_cls]')
+    parser.add_argument('--model', default='PointNet', help='model name [default: pointnet_cls]')
     parser.add_argument('--num_classes', default=15, type=int, help='default value for classes of ScanObjectNN')
     parser.add_argument('--epoch', default=200, type=int, help='number of epoch in training')
     parser.add_argument('--num_points', type=int, default=1024, help='Point Number')
     parser.add_argument('--learning_rate', default=0.01, type=float, help='learning rate in training')
     parser.add_argument('--weight_decay', type=float, default=1e-4, help='decay rate')
     parser.add_argument('--smoothing', action='store_true', default=False, help='loss smoothing')
-    parser.add_argument('--seed', type=int, help='random seed')
+    parser.add_argument('--seed', default=None, type=int, help='random seed')
     parser.add_argument('--workers', default=4, type=int, help='workers')
+    parser.add_argument('--original_data', default=True, help='use original test dataset')
     return parser.parse_args()
 
 
@@ -49,23 +74,35 @@ def parse_args():
 
 def main():
     args = parse_args()
+
+    if args.original_data:
+        move_files(['data/test_objectdataset_augmentedrot_scale75.h5'], 'data/h5_files/main_split')
+
+
     os.environ["HDF5_USE_FILE_LOCKING"] = "FALSE"
+    if args.seed is None:
+        args.seed = np.random.randint(1, 10000)
+
+    assert torch.cuda.is_available(), "Please ensure codes are executed in cuda."
+    device = 'cuda'
     if args.seed is not None:
         torch.manual_seed(args.seed)
-    if torch.cuda.is_available():
-        device = 'cuda'
-        if args.seed is not None:
-            torch.cuda.manual_seed(args.seed)
-    else:
-        device = 'cpu'
+        np.random.seed(args.seed)
+        torch.cuda.manual_seed_all(args.seed)
+        torch.cuda.manual_seed(args.seed)
+        torch.set_printoptions(10)
+        torch.backends.cudnn.benchmark = False
+        torch.backends.cudnn.deterministic = True
+        os.environ['PYTHONHASHSEED'] = str(args.seed)
     time_str = str(datetime.datetime.now().strftime('-%Y%m%d%H%M%S'))
     if args.msg is None:
         message = time_str
     else:
         message = "-" + args.msg
-    args.checkpoint = 'checkpoints/' + args.model + message
+    args.checkpoint = 'checkpoints/' + args.model + message + '-' + str(args.seed)
     if not os.path.isdir(args.checkpoint):
         mkdir_p(args.checkpoint)
+
 
     screen_logger = logging.getLogger("Model")
     screen_logger.setLevel(logging.INFO)
