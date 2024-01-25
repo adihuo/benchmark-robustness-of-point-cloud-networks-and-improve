@@ -5,8 +5,6 @@ python main.py --model PointMLP --msg demo
 # print('-----')
 
 
-
-
 import argparse
 import os
 import shutil
@@ -56,13 +54,13 @@ def parse_args():
                         help='path to save checkpoint (default: checkpoint)')
     parser.add_argument('--msg', type=str, help='message after checkpoint')
     parser.add_argument('--batch_size', type=int, default=16, help='batch size in training')
-    parser.add_argument('--model', default='PointConT_cls', help='model name [default: pointnet_cls]')
+    parser.add_argument('--model', default='PointNet', help='model name [default: pointnet_cls]')
     parser.add_argument('--epoch', default=300, type=int, help='number of epoch in training')
     parser.add_argument('--num_points', type=int, default=1024, help='Point Number')
     parser.add_argument('--learning_rate', default=0.1, type=float, help='learning rate in training')
     parser.add_argument('--min_lr', default=0.005, type=float, help='min lr')
     parser.add_argument('--weight_decay', type=float, default=2e-4, help='decay rate')
-    parser.add_argument('--seed', type=int, help='random seed')
+    parser.add_argument('--seed', default=None, type=int, help='random seed')
     parser.add_argument('--workers', default=4, type=int, help='workers')
     parser.add_argument('--original_data', default=True, help='use original test dataset')
     return parser.parse_args()
@@ -118,9 +116,9 @@ def main():
     criterion = cal_loss
     net = net.to(device)
     # criterion = criterion.to(device)
-    if device == 'cuda':
-        net = torch.nn.DataParallel(net)
-        cudnn.benchmark = True
+    # if device == 'cuda':
+    #     net = torch.nn.DataParallel(net)
+    #     cudnn.benchmark = True
 
     best_test_acc = 0.  # best test accuracy
     best_train_acc = 0.
