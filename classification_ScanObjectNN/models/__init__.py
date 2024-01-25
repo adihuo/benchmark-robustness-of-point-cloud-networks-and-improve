@@ -2,6 +2,14 @@ from __future__ import absolute_import
 
 from .pointmlp import pointMLP, pointMLPElite
 from .curvenet import CurveNet
+from .curvenet_A import CurveNet_A
+from .curvenet_AA import CurveNet_AA
+from .curvenet_B import CurveNet_B
+from .curvenet_C import CurveNet_C
+from .curvenet_D import CurveNet_D
+from .curvenet_DD import CurveNet_DD
+from .curvenet_E import CurveNet_E
+from .curvenet_F import CurveNet_F
 from .gbnet import GBNet
 from .gdanet import GDANET
 # from .paconv import PAConv
