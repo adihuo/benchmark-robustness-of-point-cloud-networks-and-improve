@@ -12,7 +12,7 @@ from .curvenet_E import CurveNet_E
 from .curvenet_F import CurveNet_F
 from .gbnet import GBNet
 from .gdanet import GDANET
-# from .paconv import PAConv
+from .paconv import PAConv
 from .pct import PCT
 from .pointconv import PointConv
 from .pointnet import PointNet
